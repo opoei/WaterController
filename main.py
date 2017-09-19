@@ -12,9 +12,6 @@ alarm_en_cmd = bytes([0b00001000])
 
 # An object that handles macroscopic 6651 settings.
 class Max6651(object):
-    def read_reg(self, cmd):
-        i2c.writeto(self.addr, cmd)
-        return i2c.readfrom(self.addr, 1) 
 
     def __init__(self, addr_raw, full_on_raw, tach_overflow_raw):
         self.addr = addr_raw
@@ -43,12 +40,14 @@ class Max6651(object):
         config = config_cmd + bytes([config_val])    
         i2c.writeto(self.addr, config)
         # read for debug
-        print(read_reg(config_cmd))
+        print(self.read_reg(config_cmd))
 
+    def read_reg(self, cmd):
+        i2c.writeto(self.addr, cmd)
+        return i2c.readfrom(self.addr, 1) 
 
     def read_speed(self,tach_cmd):
         # fan speed value is between 0 -> 255, reusing equation on pg11 of datasheet
-        # divide read value by tach_count_time. Experimentally I've found that to be accurate. 
         i2c.writeto(self.addr, tach_cmd)
         tach_max_raw = i2c.readfrom(self.addr, 1)  
         return ( int.from_bytes(tach_max_raw, 'big') / (2* self.tach_count_time) )
@@ -79,8 +78,8 @@ class Max6651(object):
         tach_prescaler_tmp = self.max_rps * 64 / 992 
         tach_prescaler = min(prescale_dict, key=lambda x:abs(x-tach_prescaler_tmp)) # find closest value
         # debug 
-        #print('tach_prescaler:', tach_prescaler)
-        #print("tach_prescaler_bits:",prescale_dict[tach_prescaler])
+        print('tach_prescaler:', tach_prescaler)
+        print("tach_prescaler_bits:",prescale_dict[tach_prescaler])
         return prescale_dict[tach_prescaler] # return 3 bit value
 
     def set_target_speed(self, target_percentage):
@@ -92,7 +91,7 @@ class Max6651(object):
             print('calculated speed val:', speed)
             speed_word = speed_cmd + bytes([speed])
             i2c.writeto(self.addr, speed_word)
-            assert self.read_reg(speed_cmd) == speed_word
+            assert self.read_reg(speed_cmd) == bytes([speed])
                 
 # init i2c interface
 scl = pyb.Pin.board.Y9
