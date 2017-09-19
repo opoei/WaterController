@@ -17,8 +17,8 @@ class Max6651(object):
         self.addr = addr_raw
         self.tach_count_time = 2 
 
-        # Setup GPIO register: GPIO1 on the max6651 as FULL ON, GPIO 0 will be ALERT. Other GPIO will be logic high/ input
-        gpio_reg = gpio_cmd + bytes([0b11110101])     
+        # Setup GPIO register: GPIO 0 will be ALERT. Other GPIO will be logic high/ input
+        gpio_reg = gpio_cmd + bytes([0b11111101])     
         i2c.writeto(self.addr, gpio_reg)
 
         # set tach overflow alert (GPIO 0 )
@@ -27,8 +27,8 @@ class Max6651(object):
         self.tach_overflow_pin = Pin(tach_overflow_raw, Pin.IN)
 
         # set pullup for full on operation 
-        self.full_on_pin = Pin(full_on_raw, Pin.OUT)
-        self.full_on_pin.value(1)
+        #self.full_on_pin = Pin(full_on_raw, Pin.OUT)
+        #self.full_on_pin.value(1)
 
         # config register defaults to soft full-on, 12v fan, divide by 4 prescaler
         # calculate max rpm and prescale then set max6651 settings
@@ -39,8 +39,11 @@ class Max6651(object):
         config_val = ( config_val << 3) + self.tach_prescaler_bits
         config = config_cmd + bytes([config_val])    
         i2c.writeto(self.addr, config)
-        # read for debug
-        print(self.read_reg(config_cmd))
+        # debug
+        config_reg_read = int.from_bytes(self.read_reg(config_cmd), 'big')
+        assert config_reg_read == config
+        print("config int:", config_reg_read)
+        print("config binary:", bin(config_reg_read))
 
     def read_reg(self, cmd):
         i2c.writeto(self.addr, cmd)
@@ -53,7 +56,22 @@ class Max6651(object):
         return ( int.from_bytes(tach_max_raw, 'big') / (2* self.tach_count_time) )
 
     def find_max_speed(self):
-        self.full_on_pin.value(0) #full on low
+        #self.full_on_pin.value(0) #full on low
+        # set soft fan off. other values are default config reg
+        config = config_cmd + bytes([0b00011010])
+        i2c.writeto(self.addr, config)
+        time.sleep_ms(20)
+        print("full off speed?:", self.read_speed(tach0_cmd))
+        time.sleep_ms(20)
+        print("full off speed?:", self.read_speed(tach0_cmd))
+        # set soft full on. other values are default config reg
+        config = config_cmd + bytes([0b00001010])
+        i2c.writeto(self.addr, config)
+        time.sleep_ms(20)
+        print("full on speed?:", self.read_speed(tach0_cmd))
+        time.sleep_ms(20)
+        print("full on speed?:", self.read_speed(tach0_cmd))
+
         # set count time register at the slowest count time (2s or 3825rpm)
         count_time_reg = count_cmd + bytes([0b00000011])
         i2c.writeto(self.addr, count_time_reg)
@@ -68,7 +86,7 @@ class Max6651(object):
         # TODO: multi sampling just in case we read the reg at the wrong time?
         time.sleep_ms(40)
         fan0_rps = self.read_speed(tach0_cmd)
-        self.full_on_pin.value(1)
+        #self.full_on_pin.value(1)
         return fan0_rps
 
     def calc_prescale(self):
