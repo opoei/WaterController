@@ -13,7 +13,7 @@ count_cmd = bytes([0b00010110])
 gpio_cmd = bytes([0b00000100])
 alarm_en_cmd = bytes([0b00001000])
 
-# An class that handles macroscopic MAX6651 operations.
+# A class that handles macroscopic MAX6651 operations.
 class Max6651(object):
 
     def __init__(self, addr_raw, i2c, full_on_extern, tach_overflow_extern):
@@ -25,7 +25,7 @@ class Max6651(object):
         # GPIO 1 will be set as full on, with the intention of acting as a fail safe for
         #   microcontroller failure. DO NOT PULL LOW DURING NORMAL OPERATION. It requires
         #   resetting config register after doing so. Currently do not have a routine to 
-        #   handle reading, saving, and re-setting the config register. Dont really see a
+        #   handle reading, saving, and re-setting the config register. Don't really see a
         #   need for it.
         gpio_reg = gpio_cmd + bytes([0b11110101])     
         self.i2c.writeto(self.addr, gpio_reg)
@@ -88,7 +88,7 @@ class Max6651(object):
         # Verifying we are at max speed. sample every half a second for 2 seconds.
         # Block until fan is spinning. 
         # REVIEW: No idea how this interacts with fans faster than 3825rpm,
-        #           it also desperately needs some form of an algorithim...
+        #           it also desperately needs some form of an algorithm...
         tach0_sample = self.read_speed(tach0_cmd)
         while tach0_sample < 1:
             time.sleep_ms(50)
